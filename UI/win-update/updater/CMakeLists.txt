@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24...3.25)
 
 find_package(zstd)
-find_package(nlohmann_json 3.11 REQUIRED)
+find_package(nlohmann_json 3.10 REQUIRED)
 
 add_executable(updater WIN32)
 
