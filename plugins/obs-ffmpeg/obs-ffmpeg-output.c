@@ -219,42 +219,26 @@ static bool create_video_stream(struct ffmpeg_data *data)
 	if (pq || hlg) {
 		const int hdr_nominal_peak_level = pq ? (int)obs_get_video_hdr_nominal_peak_level() : (hlg ? 1000 : 0);
 
-#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(59, 16, 100)
 		size_t content_size;
+#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(59, 16, 100)
 		AVContentLightMetadata *const content = av_content_light_metadata_alloc(&content_size);
-		content->MaxCLL = hdr_nominal_peak_level;
-		content->MaxFALL = hdr_nominal_peak_level;
-		av_packet_side_data_add(&data->video->codecpar->coded_side_data,
-					&data->video->codecpar->nb_coded_side_data, AV_PKT_DATA_CONTENT_LIGHT_LEVEL,
-					(uint8_t *)content, content_size, 0);
-
-		AVMasteringDisplayMetadata *const mastering = av_mastering_display_metadata_alloc();
-		mastering->display_primaries[0][0] = av_make_q(17, 25);
-		mastering->display_primaries[0][1] = av_make_q(8, 25);
-		mastering->display_primaries[1][0] = av_make_q(53, 200);
-		mastering->display_primaries[1][1] = av_make_q(69, 100);
-		mastering->display_primaries[2][0] = av_make_q(3, 20);
-		mastering->display_primaries[2][1] = av_make_q(3, 50);
-		mastering->white_point[0] = av_make_q(3127, 10000);
-		mastering->white_point[1] = av_make_q(329, 1000);
-		mastering->min_luminance = av_make_q(0, 1);
-		mastering->max_luminance = av_make_q(hdr_nominal_peak_level, 1);
-		mastering->has_primaries = 1;
-		mastering->has_luminance = 1;
-		av_packet_side_data_add(&data->video->codecpar->coded_side_data,
-					&data->video->codecpar->nb_coded_side_data,
-					AV_PKT_DATA_MASTERING_DISPLAY_METADATA, (uint8_t *)mastering,
-					sizeof(*mastering), 0);
 #else
-		AVContentLightMetadata *content = (AVContentLightMetadata *)av_stream_new_side_data(
+		AVContentLightMetadata *const content = (AVContentLightMetadata *)av_stream_new_side_data(
 			data->video, AV_PKT_DATA_CONTENT_LIGHT_LEVEL, sizeof(AVContentLightMetadata));
+#endif
 		if (content) {
 			content->MaxCLL = hdr_nominal_peak_level;
 			content->MaxFALL = hdr_nominal_peak_level;
 		}
-
-		AVMasteringDisplayMetadata *mastering = (AVMasteringDisplayMetadata *)av_stream_new_side_data(
+#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(59, 16, 100)
+		av_packet_side_data_add(&data->video->codecpar->coded_side_data,
+					&data->video->codecpar->nb_coded_side_data, AV_PKT_DATA_CONTENT_LIGHT_LEVEL,
+					(uint8_t *)content, content_size, 0);
+		AVMasteringDisplayMetadata *const mastering = av_mastering_display_metadata_alloc();
+#else
+		AVMasteringDisplayMetadata *const mastering = (AVMasteringDisplayMetadata *)av_stream_new_side_data(
 			data->video, AV_PKT_DATA_MASTERING_DISPLAY_METADATA, sizeof(AVMasteringDisplayMetadata));
+#endif
 		if (mastering) {
 			memset(mastering, 0, sizeof(*mastering));
 			mastering->display_primaries[0][0] = av_make_q(17, 25);
@@ -270,6 +254,11 @@ static bool create_video_stream(struct ffmpeg_data *data)
 			mastering->has_primaries = 1;
 			mastering->has_luminance = 1;
 		}
+#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(59, 16, 100)
+		av_packet_side_data_add(&data->video->codecpar->coded_side_data,
+					&data->video->codecpar->nb_coded_side_data,
+					AV_PKT_DATA_MASTERING_DISPLAY_METADATA, (uint8_t *)mastering,
+					sizeof(*mastering), 0);
 #endif
 	}
 
