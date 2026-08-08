@@ -226,10 +226,8 @@ static bool create_video_stream(struct ffmpeg_data *data)
 		AVContentLightMetadata *const content = (AVContentLightMetadata *)av_stream_new_side_data(
 			data->video, AV_PKT_DATA_CONTENT_LIGHT_LEVEL, sizeof(AVContentLightMetadata));
 #endif
-		if (content) {
-			content->MaxCLL = hdr_nominal_peak_level;
-			content->MaxFALL = hdr_nominal_peak_level;
-		}
+		content->MaxCLL = hdr_nominal_peak_level;
+		content->MaxFALL = hdr_nominal_peak_level;
 #if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(59, 16, 100)
 		av_packet_side_data_add(&data->video->codecpar->coded_side_data,
 					&data->video->codecpar->nb_coded_side_data, AV_PKT_DATA_CONTENT_LIGHT_LEVEL,
@@ -239,21 +237,18 @@ static bool create_video_stream(struct ffmpeg_data *data)
 		AVMasteringDisplayMetadata *const mastering = (AVMasteringDisplayMetadata *)av_stream_new_side_data(
 			data->video, AV_PKT_DATA_MASTERING_DISPLAY_METADATA, sizeof(AVMasteringDisplayMetadata));
 #endif
-		if (mastering) {
-			memset(mastering, 0, sizeof(*mastering));
-			mastering->display_primaries[0][0] = av_make_q(17, 25);
-			mastering->display_primaries[0][1] = av_make_q(8, 25);
-			mastering->display_primaries[1][0] = av_make_q(53, 200);
-			mastering->display_primaries[1][1] = av_make_q(69, 100);
-			mastering->display_primaries[2][0] = av_make_q(3, 20);
-			mastering->display_primaries[2][1] = av_make_q(3, 50);
-			mastering->white_point[0] = av_make_q(3127, 10000);
-			mastering->white_point[1] = av_make_q(329, 1000);
-			mastering->min_luminance = av_make_q(0, 1);
-			mastering->max_luminance = av_make_q(hdr_nominal_peak_level, 1);
-			mastering->has_primaries = 1;
-			mastering->has_luminance = 1;
-		}
+		mastering->display_primaries[0][0] = av_make_q(17, 25);
+		mastering->display_primaries[0][1] = av_make_q(8, 25);
+		mastering->display_primaries[1][0] = av_make_q(53, 200);
+		mastering->display_primaries[1][1] = av_make_q(69, 100);
+		mastering->display_primaries[2][0] = av_make_q(3, 20);
+		mastering->display_primaries[2][1] = av_make_q(3, 50);
+		mastering->white_point[0] = av_make_q(3127, 10000);
+		mastering->white_point[1] = av_make_q(329, 1000);
+		mastering->min_luminance = av_make_q(0, 1);
+		mastering->max_luminance = av_make_q(hdr_nominal_peak_level, 1);
+		mastering->has_primaries = 1;
+		mastering->has_luminance = 1;
 #if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(59, 16, 100)
 		av_packet_side_data_add(&data->video->codecpar->coded_side_data,
 					&data->video->codecpar->nb_coded_side_data,
