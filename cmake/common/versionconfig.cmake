@@ -45,6 +45,8 @@ elseif(_obs_version MATCHES "[0-9]+\\.[0-9]+\\.[0-9]+-beta[0-9]+")
   string(REGEX REPLACE "[0-9]+\\.[0-9]+\\.[0-9]+-beta([0-9]+).*$" "\\1" _obs_beta ${_obs_version})
 endif()
 
+set(_obs_version_canonical "31" "0" "0")
+
 list(GET _obs_version_canonical 0 OBS_VERSION_MAJOR)
 list(GET _obs_version_canonical 1 OBS_VERSION_MINOR)
 list(GET _obs_version_canonical 2 OBS_VERSION_PATCH)
