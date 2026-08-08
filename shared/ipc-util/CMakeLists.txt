@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.28...3.30)
+cmake_minimum_required(VERSION 3.24...3.25)
 
 add_library(ipc-util INTERFACE)
 add_library(OBS::ipc-util ALIAS ipc-util)

@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.22...3.25)
+
 option(ENABLE_SCRIPTING_PYTHON "Enable Python scripting support" ON)
 
 if(ENABLE_SCRIPTING_PYTHON)

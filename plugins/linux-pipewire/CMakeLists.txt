@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.28...3.30)
+cmake_minimum_required(VERSION 3.22...3.25)
 
 option(ENABLE_PIPEWIRE "Enable PipeWire support" ON)
 if(NOT ENABLE_PIPEWIRE)

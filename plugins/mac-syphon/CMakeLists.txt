@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.28...3.30)
+cmake_minimum_required(VERSION 3.24...3.25)
 
 option(ENABLE_SYPHON "Enable Syphon sharing support" ON)
 if(NOT ENABLE_SYPHON)
