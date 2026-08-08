@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24...3.25)
 
-find_package(FFnvcodec 12 REQUIRED)
+find_package(FFnvcodec 11 REQUIRED)
 
 add_executable(obs-nvenc-test)
 
