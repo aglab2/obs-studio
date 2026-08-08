@@ -107,8 +107,13 @@ static uint16_t get_max_luminance(const AVStream *stream)
 {
 	uint32_t max_luminance = 0;
 
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(60, 31, 102)
+	for (int i = 0; i < stream->nb_side_data; i++) {
+		const AVPacketSideData *const sd = &stream->side_data[i];
+#else
 	for (int i = 0; i < stream->codecpar->nb_coded_side_data; i++) {
 		const AVPacketSideData *const sd = &stream->codecpar->coded_side_data[i];
+#endif
 		switch (sd->type) {
 		case AV_PKT_DATA_MASTERING_DISPLAY_METADATA: {
 			const AVMasteringDisplayMetadata *mastering = (AVMasteringDisplayMetadata *)sd->data;
@@ -192,6 +197,11 @@ bool mp_decode_init(mp_media_t *m, enum AVMediaType type, bool hw)
 	} else {
 		d->in_frame = d->sw_frame;
 	}
+
+#if LIBAVCODEC_VERSION_MAJOR < 60
+	if (d->codec->capabilities & CODEC_CAP_TRUNC)
+		d->decoder->flags |= CODEC_FLAG_TRUNC;
+#endif
 
 	d->orig_pkt = av_packet_alloc();
 	d->pkt = av_packet_alloc();
@@ -304,7 +314,13 @@ static int decode_packet(struct mp_decode *d, int *got_frame)
 			return ret;
 		}
 
-		av_frame_unref(d->sw_frame);
+		/* does not check for color format or other parameter changes which would require frame buffer realloc */
+		if (d->sw_frame->data[0] &&
+		    (d->sw_frame->width != d->hw_frame->width || d->sw_frame->height != d->hw_frame->height)) {
+			blog(LOG_DEBUG, "MP: hardware frame size changed from %dx%d to %dx%d. reallocating frame",
+			     d->sw_frame->width, d->sw_frame->height, d->hw_frame->width, d->hw_frame->height);
+			av_frame_unref(d->sw_frame);
+		}
 
 		int err = av_hwframe_transfer_data(d->sw_frame, d->hw_frame, 0);
 		if (err == 0) {
@@ -391,8 +407,11 @@ bool mp_decode_next(struct mp_decode *d)
 		else
 			d->frame_pts = av_rescale_q(d->in_frame->best_effort_timestamp, d->stream->time_base,
 						    (AVRational){1, 1000000000});
-
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 30, 100)
 		int64_t duration = d->in_frame->duration;
+#else
+		int64_t duration = d->in_frame->pkt_duration;
+#endif
 		if (!duration)
 			duration = get_estimated_duration(d, last_pts);
 		else
