@@ -348,7 +348,11 @@ void mp_media_next_audio(mp_media_t *m)
 	struct mp_decode *d = &m->a;
 	struct obs_source_audio audio = {0};
 	AVFrame *f = d->frame;
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 24, 100)
+	int channels = f->channels;
+#else
 	int channels = f->ch_layout.nb_channels;
+#endif
 
 	if (!mp_media_can_play_frame(m, d))
 		return;

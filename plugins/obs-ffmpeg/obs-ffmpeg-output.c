@@ -276,7 +276,11 @@ static bool open_audio_codec(struct ffmpeg_data *data, int idx)
 
 	data->aframe[idx]->format = context->sample_fmt;
 	data->aframe[idx]->ch_layout = context->ch_layout;
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 24, 100)
+	channels = context->channels;
+#else
 	channels = context->ch_layout.nb_channels;
+#endif
 	data->aframe[idx]->sample_rate = context->sample_rate;
 	context->strict_std_compliance = -2;
 
@@ -712,7 +716,11 @@ static void encode_audio(struct ffmpeg_output *output, int idx, struct AVCodecCo
 
 	AVPacket *packet = NULL;
 	int ret, got_packet;
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 24, 100)
+	int channels = context->channels;
+#else
 	int channels = context->ch_layout.nb_channels;
+#endif
 	size_t total_size = data->frame_size * block_size * channels;
 
 	data->aframe[idx]->nb_samples = data->frame_size;

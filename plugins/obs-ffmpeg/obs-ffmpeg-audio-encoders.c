@@ -135,7 +135,11 @@ static bool initialize_codec(struct enc_encoder *enc)
 		return false;
 	}
 	enc->aframe->format = enc->context->sample_fmt;
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 24, 100)
+	channels = enc->context->channels;
+#else
 	channels = enc->context->ch_layout.nb_channels;
+#endif
 	enc->aframe->ch_layout = enc->context->ch_layout;
 	enc->aframe->sample_rate = enc->context->sample_rate;
 
@@ -279,7 +283,11 @@ static void *enc_create(obs_data_t *settings, obs_encoder_t *encoder, const char
 	char buf[256];
 	av_channel_layout_describe(&enc->context->ch_layout, buf, 256);
 	info("bitrate: %" PRId64 ", channels: %d, channel_layout: %s, track: %d\n",
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 24, 100)
+	     (int64_t)enc->context->bit_rate / 1000, (int)enc->context->channels, buf,
+#else
 	     (int64_t)enc->context->bit_rate / 1000, (int)enc->context->ch_layout.nb_channels, buf,
+#endif
 	     (int)obs_encoder_get_mixer_index(enc->encoder) + 1);
 	init_sizes(enc, audio);
 
@@ -343,7 +351,11 @@ static bool do_encode(struct enc_encoder *enc, struct encoder_packet *packet, bo
 	enc->aframe->pts =
 		av_rescale_q(enc->total_samples, (AVRational){1, enc->context->sample_rate}, enc->context->time_base);
 	enc->aframe->ch_layout = enc->context->ch_layout;
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 24, 100)
+	channels = enc->context->channels;
+#else
 	channels = enc->context->ch_layout.nb_channels;
+#endif
 	ret = avcodec_fill_audio_frame(enc->aframe, channels, enc->context->sample_fmt, enc->samples[0],
 				       enc->frame_size_bytes * channels, 1);
 	if (ret < 0) {
@@ -422,7 +434,11 @@ static void enc_audio_info(void *data, struct audio_convert_info *info)
 {
 	struct enc_encoder *enc = data;
 	int channels;
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 24, 100)
+	channels = enc->context->channels;
+#else
 	channels = enc->context->ch_layout.nb_channels;
+#endif
 	info->format = convert_ffmpeg_sample_format(enc->context->sample_fmt);
 	info->samples_per_sec = (uint32_t)enc->context->sample_rate;
 	if (channels != 7 && channels <= 8)
