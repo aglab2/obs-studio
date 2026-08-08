@@ -137,10 +137,11 @@ static bool initialize_codec(struct enc_encoder *enc)
 	enc->aframe->format = enc->context->sample_fmt;
 #if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 24, 100)
 	channels = enc->context->channels;
+	enc->aframe->channel_layout = enc->context->channel_layout;
 #else
 	channels = enc->context->ch_layout.nb_channels;
-#endif
 	enc->aframe->ch_layout = enc->context->ch_layout;
+#endif
 	enc->aframe->sample_rate = enc->context->sample_rate;
 
 	enc->frame_size = enc->context->frame_size;
@@ -225,6 +226,20 @@ static void *enc_create(obs_data_t *settings, obs_encoder_t *encoder, const char
 	const struct audio_output_info *aoi;
 	aoi = audio_output_get_info(audio);
 
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 24, 100)
+	enc->context->channel_layout = av_get_default_channel_layout((int)audio_output_get_channels(audio));
+	/* The avutil default channel layout for 5 channels is 5.0, which OBS
+	 * does not support. Manually set 5 channels to 4.1. */
+	if (aoi->speakers == SPEAKERS_4POINT1)
+		enc->context->channel_layout = AV_CH_LAYOUT_4POINT1;
+	/* AAC, ALAC, & FLAC default to 3.0 for 3 channels instead of 2.1.
+	 * Tell the encoder to deal with 2.1 as if it were 3.0. */
+	if (aoi->speakers == SPEAKERS_2POINT1)
+		enc->context->channel_layout = AV_CH_LAYOUT_SURROUND;
+	// ALAC supports 7.1 wide instead of regular 7.1.
+	if (aoi->speakers == SPEAKERS_7POINT1 && astrcmpi(enc->type, "alac") == 0)
+		enc->context->channel_layout = AV_CH_LAYOUT_7POINT1_WIDE_BACK;
+#else
 	av_channel_layout_default(&enc->context->ch_layout, (int)audio_output_get_channels(audio));
 	/* The avutil default channel layout for 5 channels is 5.0, which OBS
 	 * does not support. Manually set 5 channels to 4.1. */
@@ -237,6 +252,7 @@ static void *enc_create(obs_data_t *settings, obs_encoder_t *encoder, const char
 	// ALAC supports 7.1 wide instead of regular 7.1.
 	if (aoi->speakers == SPEAKERS_7POINT1 && astrcmpi(enc->type, "alac") == 0)
 		enc->context->ch_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_7POINT1_WIDE_BACK;
+#endif
 
 	enc->context->sample_rate = audio_output_get_sample_rate(audio);
 
@@ -281,11 +297,13 @@ static void *enc_create(obs_data_t *settings, obs_encoder_t *encoder, const char
 	}
 
 	char buf[256];
-	av_channel_layout_describe(&enc->context->ch_layout, buf, 256);
-	info("bitrate: %" PRId64 ", channels: %d, channel_layout: %s, track: %d\n",
 #if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 24, 100)
+	av_get_channel_layout_string(buf, sizeof(buf), enc->context->channels, enc->context->channel_layout);
+	info("bitrate: %" PRId64 ", channels: %d, channel_layout: %s, track: %d\n",
 	     (int64_t)enc->context->bit_rate / 1000, (int)enc->context->channels, buf,
 #else
+	av_channel_layout_describe(&enc->context->ch_layout, buf, 256);
+	info("bitrate: %" PRId64 ", channels: %d, channel_layout: %s, track: %d\n",
 	     (int64_t)enc->context->bit_rate / 1000, (int)enc->context->ch_layout.nb_channels, buf,
 #endif
 	     (int)obs_encoder_get_mixer_index(enc->encoder) + 1);
@@ -350,10 +368,11 @@ static bool do_encode(struct enc_encoder *enc, struct encoder_packet *packet, bo
 	enc->aframe->nb_samples = enc->frame_size;
 	enc->aframe->pts =
 		av_rescale_q(enc->total_samples, (AVRational){1, enc->context->sample_rate}, enc->context->time_base);
-	enc->aframe->ch_layout = enc->context->ch_layout;
 #if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 24, 100)
+	enc->aframe->channel_layout = enc->context->channel_layout;
 	channels = enc->context->channels;
 #else
+	enc->aframe->ch_layout = enc->context->ch_layout;
 	channels = enc->context->ch_layout.nb_channels;
 #endif
 	ret = avcodec_fill_audio_frame(enc->aframe, channels, enc->context->sample_fmt, enc->samples[0],
