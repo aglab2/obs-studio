@@ -786,7 +786,7 @@ void OBSPropertiesView::AddColorInternal(obs_property_t *prop, QFormLayout *layo
 	}
 
 	QPalette palette = QPalette(color);
-	colorLabel->setFrameStyle(QFrame::Sunken | QFrame::Panel);
+	colorLabel->setFrameStyle(((int)QFrame::Sunken) | ((int)QFrame::Panel));
 	colorLabel->setText(color.name(format));
 	colorLabel->setPalette(palette);
 	colorLabel->setStyleSheet(QString("background-color :%1; color: %2;")
@@ -874,7 +874,7 @@ void OBSPropertiesView::AddFont(obs_property_t *prop, QFormLayout *layout, QLabe
 	button->setText(tr("Basic.PropertiesWindow.SelectFont"));
 	button->setToolTip(QT_UTF8(obs_property_long_description(prop)));
 
-	fontLabel->setFrameStyle(QFrame::Sunken | QFrame::Panel);
+	fontLabel->setFrameStyle(((int)QFrame::Sunken) | ((int)QFrame::Panel));
 	fontLabel->setFont(font);
 	fontLabel->setText(QString("%1 %2").arg(face, style));
 	fontLabel->setAlignment(Qt::AlignCenter);

@@ -521,7 +521,7 @@ ColorSourceToolbar::~ColorSourceToolbar() {}
 void ColorSourceToolbar::UpdateColor()
 {
 	QPalette palette = QPalette(color);
-	ui->color->setFrameStyle(QFrame::Sunken | QFrame::Panel);
+	ui->color->setFrameStyle(((int)QFrame::Sunken) | ((int)QFrame::Panel));
 	ui->color->setText(color.name(QColor::HexRgb));
 	ui->color->setPalette(palette);
 	ui->color->setStyleSheet(QString("background-color :%1; color: %2;")

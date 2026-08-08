@@ -120,7 +120,7 @@ static void SetStyle(QLabel *label, uint32_t colorVal)
 	QColor color = color_from_int(colorVal);
 	color.setAlpha(255);
 	QPalette palette = QPalette(color);
-	label->setFrameStyle(QFrame::Sunken | QFrame::Panel);
+	label->setFrameStyle(((int)QFrame::Sunken) | ((int)QFrame::Panel));
 	label->setText(color.name(QColor::HexRgb));
 	label->setPalette(palette);
 	label->setStyleSheet(QString("background-color: %1; color: %2;")
