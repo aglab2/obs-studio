@@ -280,9 +280,9 @@ jobs:
           mv -v "${macos_intel_dsym_artifact_name}/"obs-studio-*-macos-intel-dSYMs.tar.xz \
             "${root_dir}"/OBS-Studio-${{ steps.check.outputs.version }}-macOS-Intel-dSYMs.tar.xz
           mv -v "${ubuntu_2204_x86_64_artifact_name}/"obs-studio-*-x86_64-ubuntu-gnu.deb \
-            "${root_dir}"/OBS-Studio-${{ steps.check.outputs.version }}-Ubuntu-24.04-x86_64.deb
+            "${root_dir}"/OBS-Studio-${{ steps.check.outputs.version }}-Ubuntu-22.04-x86_64.deb
           mv -v "${ubuntu_2204_x86_64_debug_name}/"obs-studio-*-x86_64-ubuntu-gnu-dbgsym.ddeb \
-            "${root_dir}"/OBS-Studio-${{ steps.check.outputs.version }}-Ubuntu-24.04-x86_64-dbsym.ddeb
+            "${root_dir}"/OBS-Studio-${{ steps.check.outputs.version }}-Ubuntu-22.04-x86_64-dbsym.ddeb
           mv -v "${ubuntu_2204_sources_name}/"obs-studio-*-sources.tar.gz \
             "${root_dir}"/OBS-Studio-${{ steps.check.outputs.version }}-Sources.tar.gz
           mv -v "${windows_installer_name}/"OBS-Studio-*.exe \
