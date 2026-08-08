@@ -89,6 +89,11 @@ int ffmpeg_decode_init(struct ffmpeg_decode *decode, enum AVCodecID id, bool use
 		return ret;
 	}
 
+#if LIBAVCODEC_VERSION_MAJOR < 60
+	if (decode->codec->capabilities & CODEC_CAP_TRUNC)
+		decode->decoder->flags |= CODEC_FLAG_TRUNC;
+#endif
+
 	return 0;
 }
 

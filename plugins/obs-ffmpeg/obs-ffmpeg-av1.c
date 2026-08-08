@@ -86,7 +86,11 @@ static bool av1_update(struct av1_encoder *enc, obs_data_t *settings)
 
 	if (enc->type == AV1_ENCODER_TYPE_SVT) {
 		av_opt_set_int(enc->ffve.context->priv_data, "preset", preset, 0);
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(59, 37, 100)
 		av_dict_set_int(&svtav1_opts, "rc", 1, 0);
+#else
+		av_opt_set(enc->ffve.context->priv_data, "rc", "vbr", 0);
+#endif
 	} else if (enc->type == AV1_ENCODER_TYPE_AOM) {
 		av_opt_set_int(enc->ffve.context->priv_data, "cpu-used", preset, 0);
 		av_opt_set(enc->ffve.context->priv_data, "usage", "realtime", 0);
@@ -105,8 +109,13 @@ static bool av1_update(struct av1_encoder *enc, obs_data_t *settings)
 		av_opt_set_int(enc->ffve.context->priv_data, "crf", cqp, 0);
 
 		if (enc->type == AV1_ENCODER_TYPE_SVT) {
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(59, 37, 100)
 			av_dict_set_int(&svtav1_opts, "rc", 0, 0);
 			av_opt_set_int(enc->ffve.context->priv_data, "qp", cqp, 0);
+#else
+			av_opt_set(enc->ffve.context->priv_data, "rc", "cqp", 0);
+			av_opt_set_int(enc->ffve.context->priv_data, "qp", cqp, 0);
+#endif
 		}
 
 	} else if (astrcmpi(rc, "vbr") != 0) { /* CBR by default */
@@ -115,10 +124,15 @@ static bool av1_update(struct av1_encoder *enc, obs_data_t *settings)
 		cqp = 0;
 
 		if (enc->type == AV1_ENCODER_TYPE_SVT) {
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(59, 37, 100)
 			av_dict_set_int(&svtav1_opts, "rc", 2, 0);
 			av_dict_set_int(&svtav1_opts, "pred-struct", 1, 0);
 			av_dict_set_int(&svtav1_opts, "bias-pct", 0, 0);
 			av_dict_set_int(&svtav1_opts, "tbr", rate, 0);
+#else
+			enc->ffve.context->rc_max_rate = rate;
+			av_opt_set(enc->ffve.context->priv_data, "rc", "cvbr", 0);
+#endif
 		} else {
 			enc->ffve.context->rc_max_rate = rate;
 		}
