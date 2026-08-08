@@ -223,9 +223,13 @@ static bool create_video_stream(struct ffmpeg_data *data)
 		AVContentLightMetadata *const content = av_content_light_metadata_alloc(&content_size);
 		content->MaxCLL = hdr_nominal_peak_level;
 		content->MaxFALL = hdr_nominal_peak_level;
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(60, 31, 102)
+		av_stream_add_side_data(data->video, AV_PKT_DATA_CONTENT_LIGHT_LEVEL, (uint8_t *)content, content_size);
+#else
 		av_packet_side_data_add(&data->video->codecpar->coded_side_data,
 					&data->video->codecpar->nb_coded_side_data, AV_PKT_DATA_CONTENT_LIGHT_LEVEL,
 					(uint8_t *)content, content_size, 0);
+#endif
 
 		AVMasteringDisplayMetadata *const mastering = av_mastering_display_metadata_alloc();
 		mastering->display_primaries[0][0] = av_make_q(17, 25);
@@ -240,10 +244,15 @@ static bool create_video_stream(struct ffmpeg_data *data)
 		mastering->max_luminance = av_make_q(hdr_nominal_peak_level, 1);
 		mastering->has_primaries = 1;
 		mastering->has_luminance = 1;
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(60, 31, 102)
+		av_stream_add_side_data(data->video, AV_PKT_DATA_MASTERING_DISPLAY_METADATA, (uint8_t *)mastering,
+					sizeof(*mastering));
+#else
 		av_packet_side_data_add(&data->video->codecpar->coded_side_data,
 					&data->video->codecpar->nb_coded_side_data,
 					AV_PKT_DATA_MASTERING_DISPLAY_METADATA, (uint8_t *)mastering,
 					sizeof(*mastering), 0);
+#endif
 	}
 
 	if (context->pix_fmt != data->config.format || data->config.width != data->config.scale_width ||
@@ -275,10 +284,12 @@ static bool open_audio_codec(struct ffmpeg_data *data, int idx)
 	}
 
 	data->aframe[idx]->format = context->sample_fmt;
-	data->aframe[idx]->ch_layout = context->ch_layout;
-#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 24, 100)
+#if LIBAVUTIL_VERSION_INT < AV_VERSION_INT(57, 24, 100)
+	data->aframe[idx]->channels = context->channels;
+	data->aframe[idx]->channel_layout = context->channel_layout;
 	channels = context->channels;
 #else
+	data->aframe[idx]->ch_layout = context->ch_layout;
 	channels = context->ch_layout.nb_channels;
 #endif
 	data->aframe[idx]->sample_rate = context->sample_rate;
@@ -321,13 +332,23 @@ static bool create_audio_stream(struct ffmpeg_data *data, int idx)
 	context = avcodec_alloc_context3(data->acodec);
 	context->bit_rate = (int64_t)data->config.audio_bitrate * 1000;
 	context->time_base = (AVRational){1, aoi.samples_per_sec};
+#if LIBAVUTIL_VERSION_INT < AV_VERSION_INT(57, 24, 100)
+	context->channels = get_audio_channels(aoi.speakers);
+#endif
 	channels = get_audio_channels(aoi.speakers);
 
 	context->sample_rate = aoi.samples_per_sec;
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 24, 100)
+	context->channel_layout = av_get_default_channel_layout(channels);
+
+	//avutil default channel layout for 5 channels is 5.0 ; fix for 4.1
+	if (aoi.speakers == SPEAKERS_4POINT1)
+		context->channel_layout = av_get_channel_layout("4.1");
+#else
 	av_channel_layout_default(&context->ch_layout, channels);
 	if (aoi.speakers == SPEAKERS_4POINT1)
 		context->ch_layout = (AVChannelLayout)AV_CHANNEL_LAYOUT_4POINT1;
-
+#endif
 	context->sample_fmt = data->acodec->sample_fmts ? data->acodec->sample_fmts[0] : AV_SAMPLE_FMT_FLTP;
 
 	stream->time_base = context->time_base;
@@ -487,6 +508,32 @@ static inline const char *safe_str(const char *s)
 		return s;
 }
 
+static enum AVCodecID get_codec_id(const char *name, int id)
+{
+	const AVCodec *codec;
+
+	if (id != 0)
+		return (enum AVCodecID)id;
+
+	if (!name || !*name)
+		return AV_CODEC_ID_NONE;
+
+	codec = avcodec_find_encoder_by_name(name);
+	if (!codec)
+		return AV_CODEC_ID_NONE;
+
+	return codec->id;
+}
+
+#if LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(59, 0, 100)
+static void set_encoder_ids(struct ffmpeg_data *data)
+{
+	data->output->oformat->video_codec = get_codec_id(data->config.video_encoder, data->config.video_encoder_id);
+
+	data->output->oformat->audio_codec = get_codec_id(data->config.audio_encoder, data->config.audio_encoder_id);
+}
+#endif
+
 bool ffmpeg_data_init(struct ffmpeg_data *data, struct ffmpeg_cfg *config)
 {
 	bool is_rtmp = false;
@@ -502,9 +549,14 @@ bool ffmpeg_data_init(struct ffmpeg_data *data, struct ffmpeg_cfg *config)
 
 	is_rtmp = (astrcmpi_n(config->url, "rtmp://", 7) == 0);
 
-	const AVOutputFormat *output_format = av_guess_format(is_rtmp ? "flv" : data->config.format_name,
-							      data->config.url,
-							      is_rtmp ? NULL : data->config.format_mime_type);
+#if LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(59, 0, 100)
+	AVOutputFormat *output_format;
+#else
+	const AVOutputFormat *output_format;
+#endif
+
+	output_format = av_guess_format(is_rtmp ? "flv" : data->config.format_name, data->config.url,
+					is_rtmp ? NULL : data->config.format_mime_type);
 
 	if (output_format == NULL) {
 		ffmpeg_log_error(LOG_WARNING, data,
@@ -523,10 +575,20 @@ bool ffmpeg_data_init(struct ffmpeg_data *data, struct ffmpeg_cfg *config)
 		goto fail;
 	}
 
+#if LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(59, 0, 100)
+	if (is_rtmp) {
+		data->output->oformat->video_codec = AV_CODEC_ID_H264;
+		data->output->oformat->audio_codec = AV_CODEC_ID_AAC;
+	} else {
+		if (data->config.format_name)
+			set_encoder_ids(data);
+	}
+#else
 	if (is_rtmp) {
 		data->config.audio_encoder_id = AV_CODEC_ID_AAC;
 		data->config.video_encoder_id = AV_CODEC_ID_H264;
 	}
+#endif
 
 	if (!init_streams(data))
 		goto fail;
@@ -716,10 +778,11 @@ static void encode_audio(struct ffmpeg_output *output, int idx, struct AVCodecCo
 
 	AVPacket *packet = NULL;
 	int ret, got_packet;
-#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 24, 100)
-	int channels = context->channels;
+	int channels;
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 24, 100)
+	channels = context->ch_layout.nb_channels;
 #else
-	int channels = context->ch_layout.nb_channels;
+	channels = context->channels;
 #endif
 	size_t total_size = data->frame_size * block_size * channels;
 
