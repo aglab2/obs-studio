@@ -59,15 +59,13 @@ runs:
       run: |
         : Install Dependencies 🛍️
         echo ::group::Install Dependencies
-        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-        echo "/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin" >> $GITHUB_PATH
-        brew update
-        brew install --quiet zsh
+        /home/linuxbrew/.linuxbrew/bin/brew update
+        /home/linuxbrew/.linuxbrew/bin/brew install --quiet zsh
         echo ::endgroup::
 
     - name: Run Ubuntu Build
       if: runner.os == 'Linux'
-      shell: zsh --no-rcs --errexit --pipefail {0}
+      shell: /home/linuxbrew/.linuxbrew/bin/zsh --no-rcs --errexit --pipefail {0}
       working-directory: ${{ inputs.workingDirectory }}
       run: |
         : Run Ubuntu Build
@@ -100,7 +98,28 @@ runs:
         .github/scripts/Build-Windows.ps1 @BuildArgs
 
     - name: Create Summary 📊
-      if: contains(fromJSON('["Linux", "macOS"]'), runner.os)
+      if: runner.os == 'Linux'
+      shell: /home/linuxbrew/.linuxbrew/bin/zsh --no-rcs --errexit --pipefail {0}
+      run: |
+        : Create Summary 📊
+
+        local -a ccache_data
+        if (( ${+RUNNER_DEBUG} )) {
+          setopt XTRACE
+          ccache_data=("${(fA)$(ccache -s -vv)}")
+        } else {
+          ccache_data=("${(fA)$(ccache -s)}")
+        }
+
+        print '### ${{ runner.os }} Ccache Stats (${{ inputs.target }})' >> $GITHUB_STEP_SUMMARY
+        print '```' >> $GITHUB_STEP_SUMMARY
+        for line (${ccache_data}) {
+          print ${line} >> $GITHUB_STEP_SUMMARY
+        }
+        print '```' >> $GITHUB_STEP_SUMMARY
+
+    - name: Create Summary 📊
+      if: runner.os == 'macOS'
       shell: zsh --no-rcs --errexit --pipefail {0}
       run: |
         : Create Summary 📊
