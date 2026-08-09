@@ -1,4 +1,4 @@
-#!/usr/bin/env zsh
+#!/home/linuxbrew/.linuxbrew/bin/zsh
 
 builtin emulate -L zsh
 setopt EXTENDED_GLOB
