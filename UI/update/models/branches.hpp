@@ -19,6 +19,29 @@
 #include <string>
 #include <nlohmann/json.hpp>
 
+/* Ubuntu 22.04 be damned. */
+#ifndef NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT
+#define NLOHMANN_JSON_FROM_WITH_DEFAULT(v1) \
+	nlohmann_json_t.v1 =                \
+		nlohmann_json_j.value(#v1, nlohmann_json_default_obj.v1);
+
+#define NLOHMANN_DEFINE_TYPE_INTRUSIVE_WITH_DEFAULT(Type, ...)              \
+	friend void to_json(nlohmann::json &nlohmann_json_j,                \
+			    const Type &nlohmann_json_t)                    \
+	{                                                                   \
+		NLOHMANN_JSON_EXPAND(                                       \
+			NLOHMANN_JSON_PASTE(NLOHMANN_JSON_TO, __VA_ARGS__)) \
+	}                                                                   \
+	friend void from_json(const nlohmann::json &nlohmann_json_j,        \
+			      Type &nlohmann_json_t)                        \
+	{                                                                   \
+		Type nlohmann_json_default_obj;                             \
+		NLOHMANN_JSON_EXPAND(NLOHMANN_JSON_PASTE(                   \
+			NLOHMANN_JSON_FROM_WITH_DEFAULT, __VA_ARGS__))      \
+	}
+
+#endif
+
 struct JsonBranch {
 	/* Internal name / ID of the branch (used in updater) */
 	std::string name;
