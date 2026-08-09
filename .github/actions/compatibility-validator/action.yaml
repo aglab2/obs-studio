@@ -26,11 +26,7 @@ runs:
         if [[ "${RUNNER_DEBUG}" ]]; then set -x; fi
 
         echo ::group::Python Set Up
-        if [[ "${RUNNER_OS}" == Linux ]]; then
-          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-          echo "/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin" >> $GITHUB_PATH
-        fi
-        brew install --quiet python3
+        /home/linuxbrew/.linuxbrew/bin/brew install --quiet python3
 
         python3 -m venv .venv
 

@@ -33,17 +33,14 @@ runs:
       run: |
         : Install Dependencies 🛍️
         echo ::group::Install Dependencies
-        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-        echo "/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin" >> $GITHUB_PATH
-        echo "/home/linuxbrew/.linuxbrew/opt/clang-format@17/bin" >> $GITHUB_PATH
-        brew update
-        brew install --quiet zsh
+        /home/linuxbrew/.linuxbrew/bin/brew update
+        /home/linuxbrew/.linuxbrew/bin/brew install --quiet zsh
         echo ::endgroup::
 
     - name: Run clang-format 🐉
       if: fromJSON(steps.checks.outputs.hasChangedFiles)
       id: result
-      shell: zsh --no-rcs --errexit --pipefail {0}
+      shell: /home/linuxbrew/.linuxbrew/bin/zsh --no-rcs --errexit --pipefail {0}
       working-directory: ${{ inputs.workingDirectory }}
       env:
         CHANGED_FILES: ${{ steps.checks.outputs.changedFiles }}
