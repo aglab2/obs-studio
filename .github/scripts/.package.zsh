@@ -113,10 +113,16 @@ package() {
   local commit_hash
 
   if [[ -d ${project_root}/.git ]] {
-    local git_description="$(git describe --tags --long)"
-    commit_version="${${git_description%-*}%-*}"
-    commit_hash="${git_description##*-g}"
-    commit_distance="${${git_description%-*}##*-}"
+    commit_hash="$(git rev-parse --short=9 HEAD 2>/dev/null)"
+
+    local git_description
+    if git_description="$(git describe --tags --long 2>/dev/null)"; then
+      commit_version="${${git_description%-*}%-*}"
+      commit_hash="${git_description##*-g}"
+      commit_distance="${${git_description%-*}##*-}"
+    else
+      commit_distance='1'
+    fi
   }
 
   local output_name
